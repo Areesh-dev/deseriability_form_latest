@@ -477,6 +477,29 @@
       #submit-btn:hover {
         transform: scale(1.05);
       }
+
+      .submitting {
+        position: relative;
+        padding-right: 30px !important;
+      }
+      .submitting::after {
+        content: "";
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: translateY(-50%) rotate(360deg);
+        }
+      }
       /* Animation Enhancements */
       @keyframes fadeIn {
         from {
@@ -1664,128 +1687,73 @@
 
       // Inside your <script> tag - update these functions
 
-// Save form data with proper structure
-function saveFormData() {
-    // Only save personal info on page 4
-    if (currentPage === 4) {
-        formData.personalInfo = {
+      // Save form data with proper structure
+      function saveFormData() {
+        // Only save personal info on page 4
+        if (currentPage === 4) {
+          formData.personalInfo = {
             name: document.getElementById("fullName").value.trim(),
             gender: document.getElementById("gender").value,
             city: document.getElementById("city").value,
             email: document.getElementById("email").value.trim(),
             phone: document.getElementById("phone").value.trim(),
             occupation: document.getElementById("occupation").value,
-        };
-    }
-
-    // Save responses for all multiple selection pages
-    const responsePages = {
-        5: { name: "weekend", title: "What's Your Ideal Weekend?" },
-        6: { name: "meeting", title: "How do you feel about meeting new people on app?" },
-        7: { name: "vibe", title: "Pick your vibe." },
-        9: { name: "new_things", title: "When was the last time you tried something new with someone?" },
-        10: { name: "frustrations", title: "Rate your frustration with these struggles" },
-        11: { name: "blockers", title: "What stopped you from meeting new people?" },
-        13: { name: "safe_fun", title: "Would you try a SAFE, fun way to...?" },
-        14: { name: "platform", title: "How likely are you to join a platform that helps you:" },
-    };
-
-    if (responsePages[currentPage]) {
-        const pageConfig = responsePages[currentPage];
-        const selected = document.querySelectorAll(
-            `input[name="${pageConfig.name}"]:checked`
-        );
-
-        // Ensure responses is an object
-        if (!formData.responses || typeof formData.responses !== 'object') {
-            formData.responses = {};
+          };
         }
 
-        formData.responses[pageConfig.name] = {
+        // Save responses for all multiple selection pages
+        const responsePages = {
+          5: { name: "weekend", title: "What's Your Ideal Weekend?" },
+          6: {
+            name: "meeting",
+            title: "How do you feel about meeting new people on app?",
+          },
+          7: { name: "vibe", title: "Pick your vibe." },
+          9: {
+            name: "new_things",
+            title:
+              "When was the last time you tried something new with someone?",
+          },
+          10: {
+            name: "frustrations",
+            title: "Rate your frustration with these struggles",
+          },
+          11: {
+            name: "blockers",
+            title: "What stopped you from meeting new people?",
+          },
+          13: {
+            name: "safe_fun",
+            title: "Would you try a SAFE, fun way to...?",
+          },
+          14: {
+            name: "platform",
+            title: "How likely are you to join a platform that helps you:",
+          },
+        };
+
+        if (responsePages[currentPage]) {
+          const pageConfig = responsePages[currentPage];
+          const selected = document.querySelectorAll(
+            `input[name="${pageConfig.name}"]:checked`
+          );
+
+          // Ensure responses is an object
+          if (!formData.responses || typeof formData.responses !== "object") {
+            formData.responses = {};
+          }
+
+          formData.responses[pageConfig.name] = {
             question: pageConfig.title,
             answers: Array.from(selected).map((input) => ({
-                value: input.value,
-                text: input.getAttribute("data-label") || input.value
+              value: input.value,
+              text: input.getAttribute("data-label") || input.value,
             })),
-        };
-    }
-}
+          };
+        }
+      }
 
-// Enhanced form submission handler
-document.getElementById("submit-btn").addEventListener("click", function() {
-    if (validateCurrentPage()) {
-        saveFormData();
-        const submitBtn = this;
-        submitBtn.textContent = "Submitting...";
-        submitBtn.disabled = true;
-
-        // Log data for debugging
-        console.log("Submitting data:", JSON.stringify(formData, null, 2));
-        
-        // Send data to backend
-        fetch('http://localhost:5000/submit', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                // Try to parse error response
-                return response.json().then(err => {
-                    throw new Error(err.error || "Submission failed");
-                }).catch(() => {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                alert("Form submitted successfully!\n\nThank you for completing the Social Adventure Form.");
-                
-                // Reset form
-                document.querySelectorAll('input, select').forEach(el => {
-                    if (el.type !== 'button' && el.type !== 'submit') {
-                        el.value = '';
-                    }
-                });
-                
-                document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                    cb.checked = false;
-                    cb.disabled = false;
-                    const option = cb.closest(".radio-option, .vibe-option");
-                    if (option) {
-                        option.classList.remove("active");
-                        const icon = option.querySelector(".material-symbols-outlined");
-                        if (icon) icon.textContent = "add";
-                    }
-                });
-                
-                document.querySelectorAll(".selected-count").forEach(el => {
-                    el.textContent = "0";
-                    el.style.backgroundColor = "#2f80ed";
-                });
-                
-                // Go to first page
-                nextPage(1);
-            } else {
-                throw new Error(data.error || "Submission failed");
-            }
-        })
-        .catch(error => {
-            alert("Error: " + error.message);
-            console.error("Submission error:", error);
-        })
-        .finally(() => {
-            submitBtn.textContent = "Submit";
-            submitBtn.disabled = false;
-        });
-    }
-});
-
-      // Form Submission
+      // Enhanced form submission handler
       document
         .getElementById("submit-btn")
         .addEventListener("click", function () {
@@ -1795,6 +1763,9 @@ document.getElementById("submit-btn").addEventListener("click", function() {
             submitBtn.textContent = "Submitting...";
             submitBtn.disabled = true;
 
+            // Log data for debugging
+            console.log("Submitting data:", JSON.stringify(formData, null, 2));
+
             // Send data to backend
             fetch("http://localhost:5000/submit", {
               method: "POST",
@@ -1803,25 +1774,130 @@ document.getElementById("submit-btn").addEventListener("click", function() {
               },
               body: JSON.stringify(formData),
             })
-              .then((response) => response.json())
+              .then((response) => {
+                if (!response.ok) {
+                  // Try to parse error response
+                  return response
+                    .json()
+                    .then((err) => {
+                      throw new Error(err.error || "Submission failed");
+                    })
+                    .catch(() => {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+              })
               .then((data) => {
                 if (data.success) {
                   alert(
                     "Form submitted successfully!\n\nThank you for completing the Social Adventure Form."
                   );
-                  resetForm();
+
+                  // Reset form
+                  document.querySelectorAll("input, select").forEach((el) => {
+                    if (el.type !== "button" && el.type !== "submit") {
+                      el.value = "";
+                    }
+                  });
+
+                  document
+                    .querySelectorAll('input[type="checkbox"]')
+                    .forEach((cb) => {
+                      cb.checked = false;
+                      cb.disabled = false;
+                      const option = cb.closest(".radio-option, .vibe-option");
+                      if (option) {
+                        option.classList.remove("active");
+                        const icon = option.querySelector(
+                          ".material-symbols-outlined"
+                        );
+                        if (icon) icon.textContent = "add";
+                      }
+                    });
+
+                  document.querySelectorAll(".selected-count").forEach((el) => {
+                    el.textContent = "0";
+                    el.style.backgroundColor = "#2f80ed";
+                  });
+
+                  // Go to first page
                   nextPage(1);
                 } else {
-                  alert("Submission failed: " + data.error);
+                  throw new Error(data.error || "Submission failed");
                 }
               })
               .catch((error) => {
-                alert("Network error: " + error.message);
+                alert("Error: " + error.message);
+                console.error("Submission error:", error);
               })
               .finally(() => {
                 submitBtn.textContent = "Submit";
                 submitBtn.disabled = false;
               });
+          }
+        });
+
+      // Form Submission
+      // Add this at the top of your script section
+      let isSubmitting = false;
+
+      // Replace your existing submit button event listener with this:
+      document
+        .getElementById("submit-btn")
+        .addEventListener("click", async function (e) {
+          e.preventDefault();
+          const submitBtn = this;
+
+          // Prevent multiple submissions
+          if (isSubmitting) {
+            return;
+          }
+
+          // Validate form
+          if (!validateCurrentPage()) {
+            alert("Please fill all required fields correctly");
+            return;
+          }
+
+          // Set submitting state
+          isSubmitting = true;
+          submitBtn.disabled = true;
+          submitBtn.classList.add("submitting");
+          submitBtn.textContent = "Submitting...";
+
+          try {
+            saveFormData();
+
+            const response = await fetch("http://localhost:5000/submit", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+              throw new Error(
+                data.error || "Submission failed. Please try again."
+              );
+            }
+
+            // Success - show alert and reset form
+            alert("Form submitted successfully!");
+            resetForm();
+            nextPage(1);
+          } catch (error) {
+            console.error("Submission error:", error);
+            alert(error.message);
+          } finally {
+            // Reset button state
+            submitBtn.classList.remove("submitting");
+            submitBtn.textContent = "Submit";
+            submitBtn.disabled = false;
+            isSubmitting = false;
           }
         });
 
